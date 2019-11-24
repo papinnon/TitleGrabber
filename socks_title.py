@@ -6,7 +6,6 @@ import ssl
 from urllib.parse import urlparse
 
 
-
 def filterURL(url):
     if(url[:4] == 'http'):
         try:
@@ -31,7 +30,9 @@ def filterURL(url):
         return ret
 
 def HTTPS_getTitle(ip, port, timeout=1):
-    context= ssl.create_default_context()
+    context= ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    context.verify_mode=ssl.CERT_NONE
+    context.check_hostname=False
     GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\n\r\n" % ip
     if(ip==None):
         exit()
