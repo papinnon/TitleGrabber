@@ -109,7 +109,6 @@ def HTTP_gettitle(ip, port, timeout=0.5):
             if( b'HTTP/1.1 30'in data and (b'Location: ' in data or b'location' in data)):
                 break
             if(b'</title>'in data or b'</TITLE>' in data):
-                print(3)
                 break
     except Exception as e:
         print('('+ip+' :'+str(e)+')')
