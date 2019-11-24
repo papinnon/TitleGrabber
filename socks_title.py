@@ -73,14 +73,14 @@ def HTTPS_getTitle(ip, port, timeout=1):
 
     respstr = resp
     try:
-        if('</title>' in  respstr):
+        if(b'</title>' in  respstr):
             headstart= respstr.index(b'<title>')+7
             headend= respstr.index(b'</title>')
         else:
             headstart= respstr.index(b'<TITLE>')+7
             headend= respstr.index(b'</TITLE>')
     except:
-        print('('+ip+' : failed to find title)')
+        print('('+ip+' : failed to find <title> tag)')
         exit()
     try:
         title = respstr[headstart: headend].decode('utf-8')
@@ -103,12 +103,13 @@ def HTTP_gettitle(ip, port, timeout=0.5):
         while(True):
             byte = soc.recv(768)
             data+=byte
-            print(data.decode('utf-8'))
+        #    print(data.decode('utf-8'))
             if(byte == b''):
                 break
             if( b'HTTP/1.1 30'in data and (b'Location: ' in data or b'location' in data)):
                 break
             if(b'</title>'in data or b'</TITLE>' in data):
+                print(3)
                 break
     except Exception as e:
         print('('+ip+' :'+str(e)+')')
@@ -128,14 +129,14 @@ def HTTP_gettitle(ip, port, timeout=0.5):
         exit()
     respstr = resp
     try:
-        if('</title>' in  respstr):
+        if(b'</title>' in  respstr):
             headstart= respstr.index(b'<title>')+7
             headend= respstr.index(b'</title>')
         else:
             headstart= respstr.index(b'<TITLE>')+7
             headend= respstr.index(b'</TITLE>')
-    except:
-        print('('+ip+' : failed to find title)')
+    except Exception as e:
+        print('('+ip+' : failed to find <title> tag)')
         exit()
     try:
         title = respstr[headstart: headend].decode('utf-8')
