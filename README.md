@@ -1,2 +1,2 @@
-***A simple HTTP/HTTPs Title Grabber ***
-usage : python xxx.py inputfile
+#A simple HTTP/HTTPs Title Grabber 
+usage : python xxx.py inputfile   
