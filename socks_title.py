@@ -49,8 +49,9 @@ def HTTPS_getTitle(ip, port, timeout=1):
                 break
             if( b'HTTP/1.1 30'in data and (b'Location: ' in data or b'location' in data)):
                 break
-            if(b'</title>'in data):
+            if(b'</title>'in data or b'</TITLE>' in data):
                 break
+
 
             continue
     except Exception as e:
@@ -72,8 +73,12 @@ def HTTPS_getTitle(ip, port, timeout=1):
 
     respstr = resp
     try:
-        headstart= respstr.index(b'<title>')+7
-        headend= respstr.index(b'</title>')
+        if('</title>' in  respstr):
+            headstart= respstr.index(b'<title>')+7
+            headend= respstr.index(b'</title>')
+        else:
+            headstart= respstr.index(b'<TITLE>')+7
+            headend= respstr.index(b'</TITLE>')
     except:
         print('('+ip+' : failed to find title)')
         exit()
@@ -98,11 +103,12 @@ def HTTP_gettitle(ip, port, timeout=0.5):
         while(True):
             byte = soc.recv(768)
             data+=byte
+            print(data.decode('utf-8'))
             if(byte == b''):
                 break
             if( b'HTTP/1.1 30'in data and (b'Location: ' in data or b'location' in data)):
                 break
-            if(b'</title>'in data):
+            if(b'</title>'in data or b'</TITLE>' in data):
                 break
     except Exception as e:
         print('('+ip+' :'+str(e)+')')
@@ -122,8 +128,12 @@ def HTTP_gettitle(ip, port, timeout=0.5):
         exit()
     respstr = resp
     try:
-        headstart= respstr.index(b'<title>')+7
-        headend= respstr.index(b'</title>')
+        if('</title>' in  respstr):
+            headstart= respstr.index(b'<title>')+7
+            headend= respstr.index(b'</title>')
+        else:
+            headstart= respstr.index(b'<TITLE>')+7
+            headend= respstr.index(b'</TITLE>')
     except:
         print('('+ip+' : failed to find title)')
         exit()
@@ -179,7 +189,7 @@ def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 8):
     for i in threads:
         i.start()
     for i in threads:
-        i.join(timeout=1)
+        i.join(timeout=10)
 
 #HTTPS_getTitle('www.taobao.com',443,2)
 #async_getTitle(['www.baidu.com'],timeout=20)
