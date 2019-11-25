@@ -4,10 +4,15 @@ import threading
 import re
 import ssl
 from urllib.parse import urlparse
+import queue
+from queue import Queue
+import time
 
 debug=0
+q  = queue.Queue()
+
 def filterURL(url):
-    if(url[:4] == 'http'):
+    if(url[:4] == 'http'):# {{{
         try:
             res =urlparse(url)
         except:
@@ -19,7 +24,6 @@ def filterURL(url):
         else:
                 ret = (res.hostname, res.port, res.scheme)
         return ret
-#    elif( re.search('^[0-9]*\.',url)):
     else:
         url = 'http://'+url
         res = urlparse(url)
@@ -27,15 +31,15 @@ def filterURL(url):
             ret = (res.hostname, 80, 'http')
         else:
             ret = (res.hostname, res.port, 'http')
-        return ret
+        return ret# }}}
 
 def HTTPS_getTitle(ip, port, timeout=1):
-    context= ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    context= ssl.SSLContext(ssl.PROTOCOL_TLSv1)# {{{
     context.verify_mode=ssl.CERT_NONE
     context.check_hostname=False
     GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\nUser-Agent: Mozilla /5.0 (Compatible MSIE 9.0;Windows NT 6.1;WOW64; Trident/5.0)\r\n\r\n" % ip
     if(ip==None):
-        exit()
+        return
     try:
         sock = socket.create_connection((ip, port), timeout=1)
         soc = context.wrap_socket(sock, server_hostname=ip)
@@ -59,7 +63,7 @@ def HTTPS_getTitle(ip, port, timeout=1):
             continue
     except Exception as e:
         print('('+ip+' :'+str(e)+')')
-        sys.exit()
+        return
     resp = data
     if(b'30' == resp[9:11]):
         if(b'Location' in resp):
@@ -74,7 +78,7 @@ def HTTPS_getTitle(ip, port, timeout=1):
         if(res[0]==None):
             print('('+ip+' : failed)')
         getTitle( res,timeout = timeout)
-        exit()
+        return
 
     respstr = resp
     try:
@@ -86,18 +90,21 @@ def HTTPS_getTitle(ip, port, timeout=1):
             headend= respstr.index(b'</TITLE>')
     except:
         print('('+ip+' : failed to find <title> tag)')
-        exit()
+        return
     try:
         title = respstr[headstart: headend].decode('utf-8')
     except:
-        title = respstr[headstart: headend].decode('gb2312')
-
-    print((ip, title, 'https://'+ip+':'+str(port)))
+        try:
+            title = respstr[headstart: headend].decode('gb2312')
+        except:
+            print('('+ip+' : failed to decode( target encoding is neither gb2312 nor utf-8)')
+            return
+    print((ip, title, 'https://'+ip+':'+str(port)))# }}}
 
 def HTTP_gettitle(ip, port, timeout=0.5):
-    GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\n\r\n" % ip
+    GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\n\r\n" % ip# {{{
     if(ip==None):
-        exit()
+        return
     try:
         soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         soc.settimeout(timeout)
@@ -117,7 +124,7 @@ def HTTP_gettitle(ip, port, timeout=0.5):
                 break
     except Exception as e:
         print('('+ip+' :'+str(e)+')')
-        sys.exit()
+        return
     resp = data
     if(b'30' == resp[9:11]):
         if(b'Location' in resp):
@@ -130,7 +137,7 @@ def HTTP_gettitle(ip, port, timeout=0.5):
         if(res[0]==None):
             print('('+ip+' : failed)')
         getTitle( res,timeout = timeout)
-        exit()
+        return
     respstr = resp
     try:
         if(b'</title>' in  respstr):
@@ -141,13 +148,16 @@ def HTTP_gettitle(ip, port, timeout=0.5):
             headend= respstr.index(b'</TITLE>')
     except Exception as e:
         print('('+ip+' : failed to find <title> tag)')
-        exit()
+        return
     try:
         title = respstr[headstart: headend].decode('utf-8')
     except:
-        title = respstr[headstart: headend].decode('gb2312')
-
-    print((ip, title, 'http://'+ip+':'+str(port)))
+        try:
+            title = respstr[headstart: headend].decode('gb2312')
+        except:
+            print('('+ip+' : failed to decode( target encoding is neither gb2312 nor utf-8)')
+            return
+    print((ip, title, 'http://'+ip+':'+str(port)))# }}}
 
 
 def getTitle(url_filterd, timeout=0.5 ):
@@ -156,9 +166,27 @@ def getTitle(url_filterd, timeout=0.5 ):
     elif(url_filterd[2]== 'https'):
         HTTPS_getTitle(url_filterd[0], url_filterd[1], timeout= timeout*2)
 
+def thread_cb( timeout=1):
+    while(True):
+        try:
+            target = q.get_nowait()
+            getTitle(target, timeout =timeout)
+        except queue.Empty:
+            if (debug ==1):
+                print("Queue Empty Exiting...");
+            break
+    return
+
+def timer():
+    while(True):
+        if((time.time()//1) %10 == 0):
+            print(q.qsize()/65535)
+            time.sleep(1)
+       
+
+
 def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 256):
-    #parsing http like url
-    connections = []
+    #parsing http like url# {{{
     for url in urls:
         if(url[:4] == 'http'):
             try:
@@ -171,9 +199,8 @@ def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 256):
                     ret = (res.hostname, 80, 'http')
             else:
                     ret = (res.hostname, res.port, res.scheme)
-            connections.append(ret)
+            q.put(ret)
             continue
-    #    elif( re.search('^[0-9]*\.',url)):
         else:
             url = 'http://'+url
             res = urlparse(url)
@@ -181,31 +208,25 @@ def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 256):
                 ret = (res.hostname, 80, 'http')
             else:
                 ret = (res.hostname, res.port, 'http')
-            connections.append( ret)
+            q.put(ret)
             continue
 
-#   create_threads
-    connection_cnt = len(connections)
-    if(connection_cnt % thread_cnt == 0):
-        r_cnt = connection_cnt//thread_cnt
-    else:
-        r_cnt = connection_cnt//thread_cnt +1
-    for n_round in range(r_cnt):
-        threads = []
-        for j in range(thread_cnt):
-            if(n_round*thread_cnt+j >= connection_cnt):
-                break
-            print({'ip':connections[n_round*thread_cnt+j][0],'port':connections[n_round*thread_cnt+j][1],'timeout':timeout})
-            threads.append(threading.Thread(target=getTitle,kwargs={'url_filterd':connections[n_round*thread_cnt+j],'timeout':timeout}))
-        for thr in threads:
-            thr.start()
-        for thr in threads:
-            thr.join(timeout=20)
-        threads.clear()
+    #   create_threads
+    connection_cnt = q.qsize() 
+    threads = []
+    for i in range(thread_cnt):
+        threads.append(threading.Thread(target=thread_cb,kwargs={'timeout':timeout}))
+        threads[i].start()
+#    threading.Thread(target= timer).start()
+    for i in threads:
+        i.join()
+        
+
 
 #HTTPS_getTitle('www.taobao.com',443,2)
 #async_getTitle(['www.baidu.com'],timeout=20)
 #async_getTitle(['yandex.com','www.baidu.com','www.qq.com','www.taobao.com','www.cqupt.edu.cn','stackoverflow.com','google.com','apple.cn'],timeout=2)
+# }}}
 
 if __name__ == '__main__':
     f = open(sys.argv[1])
@@ -214,6 +235,7 @@ if __name__ == '__main__':
     for i in f:
         urls.append(i[:-1])
     async_getTitle(urls, timeout=10, thread_cnt= thread_cnt)
+    f.close()
 
 
 
