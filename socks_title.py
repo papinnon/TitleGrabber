@@ -5,7 +5,7 @@ import re
 import ssl
 from urllib.parse import urlparse
 
-
+debug=0
 def filterURL(url):
     if(url[:4] == 'http'):
         try:
@@ -33,7 +33,7 @@ def HTTPS_getTitle(ip, port, timeout=1):
     context= ssl.SSLContext(ssl.PROTOCOL_TLSv1)
     context.verify_mode=ssl.CERT_NONE
     context.check_hostname=False
-    GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\n\r\n" % ip
+    GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\nUser-Agent: Mozilla /5.0 (Compatible MSIE 9.0;Windows NT 6.1;WOW64; Trident/5.0)\r\n\r\n" % ip
     if(ip==None):
         exit()
     try:
@@ -46,6 +46,8 @@ def HTTPS_getTitle(ip, port, timeout=1):
         while( 1):
             byte = soc.recv(768)
             data+=byte
+            if(debug == 1):
+                print(byte.decode('utf-8'))
             if(byte == b''):
                 break
             if( b'HTTP/1.1 30'in data and (b'Location: ' in data or b'location' in data)):
@@ -64,6 +66,8 @@ def HTTPS_getTitle(ip, port, timeout=1):
             newurl = re.search("Location: .*\n", resp.decode('utf-8')).group(0)[10:-2]
         else:
             newurl = re.search("location: .*\n", resp.decode('utf-8')).group(0)[10:-2]
+        if (newurl[:2] == '//'):
+                newurl = newurl[2:]
         res = filterURL(newurl)
         if(res==None):
             print('('+ip+' : failed)')
