@@ -152,7 +152,7 @@ def getTitle(url_filterd, timeout=0.5 ):
     elif(url_filterd[2]== 'https'):
         HTTPS_getTitle(url_filterd[0], url_filterd[1], timeout= timeout*2)
 
-def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 8):
+def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 256):
     #parsing http like url
     connections = []
     for url in urls:
@@ -181,16 +181,23 @@ def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 8):
             continue
 
 #   create_threads
-    threads = []
-    if(connections ==None):
-        exit()
-    for i in range(len(connections)):
-        print({'ip':connections[i][0],'port':connections[i][1],'timeout':timeout})
-        threads.append(threading.Thread(target=getTitle,kwargs={'url_filterd':connections[i],'timeout':timeout}))
-    for i in threads:
-        i.start()
-    for i in threads:
-        i.join(timeout=10)
+    connection_cnt = len(connections)
+    if(connection_cnt % thread_cnt == 0):
+        r_cnt = connection_cnt//thread_cnt
+    else:
+        r_cnt = connection_cnt//thread_cnt +1
+    for n_round in range(r_cnt):
+        threads = []
+        for j in range(thread_cnt):
+            if(n_round*thread_cnt+j >= connection_cnt):
+                break
+            print({'ip':connections[n_round*thread_cnt+j][0],'port':connections[n_round*thread_cnt+j][1],'timeout':timeout})
+            threads.append(threading.Thread(target=getTitle,kwargs={'url_filterd':connections[n_round*thread_cnt+j],'timeout':timeout}))
+        for thr in threads:
+            thr.start()
+        for thr in threads:
+            thr.join(timeout=20)
+        threads.clear()
 
 #HTTPS_getTitle('www.taobao.com',443,2)
 #async_getTitle(['www.baidu.com'],timeout=20)
@@ -199,9 +206,10 @@ def async_getTitle( urls=[] , timeout=0.5,thread_cnt = 8):
 if __name__ == '__main__':
     f = open(sys.argv[1])
     urls = []
+    thread_cnt = 256
     for i in f:
         urls.append(i[:-1])
-    async_getTitle(urls, timeout=10)
+    async_getTitle(urls, timeout=10, thread_cnt= thread_cnt)
 
 
 
