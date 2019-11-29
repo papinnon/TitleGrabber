@@ -10,6 +10,7 @@ import time
 
 debug=0
 q  = queue.Queue()
+resource  = "/index.html"
 
 def filterURL(url):
     if(url[:4] == 'http'):# {{{
@@ -33,11 +34,16 @@ def filterURL(url):
             ret = (res.hostname, res.port, 'http')
         return ret# }}}
 
-def HTTPS_getTitle(ip, port, timeout=1):
+def HTTPS_getTitle(ip, port, timeout=1 , resource = None):
     context= ssl.SSLContext(ssl.PROTOCOL_TLSv1)# {{{
     context.verify_mode=ssl.CERT_NONE
     context.check_hostname=False
-    GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\nUser-Agent: Mozilla /5.0 (Compatible MSIE 9.0;Windows NT 6.1;WOW64; Trident/5.0)\r\n\r\n" % ip
+    raw_payload=  "GET %s HTTP/1.1\r\nHost:%s\r\nUser-Agent: Mozilla /5.0 (Compatible MSIE 9.0;Windows NT 6.1;WOW64; Trident/5.0)\r\n\r\n"  
+    if(resource != None):
+        GET_payload = raw_payload% (resource, ip)
+    else:
+        GET_payload = raw_payload %("/", ip)
+
     if(ip==None):
         return
     try:
@@ -89,7 +95,7 @@ def HTTPS_getTitle(ip, port, timeout=1):
             headstart= respstr.index(b'<TITLE>')+7
             headend= respstr.index(b'</TITLE>')
     except:
-        print('('+ip+' : failed to find <title> tag)')
+        print('('+ip+','+respstr[:32]+','+'cant find title'+')')
         return
     try:
         title = respstr[headstart: headend].decode('utf-8')
@@ -99,10 +105,14 @@ def HTTPS_getTitle(ip, port, timeout=1):
         except:
             print('('+ip+' : failed to decode( target encoding is neither gb2312 nor utf-8)')
             return
-    print((ip, title, 'https://'+ip+':'+str(port)))# }}}
+    print((ip, title, 'https://'+ip+':'+str(port), "resource: "+resource))# }}}
 
-def HTTP_gettitle(ip, port, timeout=0.5):
-    GET_payload=  "GET / HTTP/1.1\r\nHost:%s\r\n\r\n" % ip# {{{
+def HTTP_gettitle(ip, port, timeout=0.5, resource = None):
+    raw_payload=  "GET %s HTTP/1.1\r\nHost:%s\r\nUser-Agent: Mozilla /5.0 (Compatible MSIE 9.0;Windows NT 6.1;WOW64; Trident/5.0)\r\n\r\n"  # {{{
+    if(resource != None):
+        GET_payload = raw_payload% (resource, ip)
+    else:
+        GET_payload = raw_payload %("/", ip)
     if(ip==None):
         return
     try:
@@ -157,14 +167,14 @@ def HTTP_gettitle(ip, port, timeout=0.5):
         except:
             print('('+ip+' : failed to decode( target encoding is neither gb2312 nor utf-8)')
             return
-    print((ip, title, 'http://'+ip+':'+str(port)))# }}}
+    print((ip, title, 'http://'+ip+':'+str(port), "resource: ", resource))# }}}
 
 
 def getTitle(url_filterd, timeout=0.5 ):
     if(url_filterd[2]== 'http'):
-        HTTP_gettitle(url_filterd[0], url_filterd[1], timeout= timeout)
+        HTTP_gettitle(url_filterd[0], url_filterd[1], timeout= timeout, resource = resource)
     elif(url_filterd[2]== 'https'):
-        HTTPS_getTitle(url_filterd[0], url_filterd[1], timeout= timeout*2)
+        HTTPS_getTitle(url_filterd[0], url_filterd[1], timeout= timeout*2, resource = resource)
 
 def thread_cb( timeout=1):
     while(True):
