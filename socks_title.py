@@ -10,7 +10,7 @@ import time
 
 debug=0
 q  = queue.Queue()
-resource  = "/index.html"
+resource  = "/"
 
 def filterURL(url):
     if(url[:4] == 'http'):# {{{
@@ -47,7 +47,7 @@ def HTTPS_getTitle(ip, port, timeout=1 , resource = None):
     if(ip==None):
         return
     try:
-        sock = socket.create_connection((ip, port), timeout=1)
+        sock = socket.create_connection((ip, port), timeout=timeout)
         soc = context.wrap_socket(sock, server_hostname=ip)
         soc.settimeout(timeout)
         soc.send(GET_payload.encode())
